@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import random
+import sys
 import time
 import urllib.error
 import urllib.parse
@@ -27,8 +28,11 @@ def read_cookie(path: str | None = None) -> str:
     支持两种文件格式：
     1. 单行 ``SESSDATA=xxx; bili_jct=yyy``；
     2. 浏览器导出的 Netscape cookies.txt（只取 .bilibili.com 域）。
+    ``path`` 传 ``-`` 时从标准输入读取，便于接密钥管理或管道。
     """
-    if path:
+    if path == "-":
+        raw = sys.stdin.read().strip()
+    elif path:
         raw = Path(path).expanduser().read_text(encoding="utf-8").strip()
     else:
         raw = (os.environ.get("BILI_COOKIE") or "").strip()

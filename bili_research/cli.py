@@ -151,27 +151,33 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="bili_research",
         description="B 站视频字幕 / 评论采集（纯 HTTP，无需浏览器接管）")
-    parser.add_argument("--cookie-file", help="Cookie 文件（单行或 Netscape cookies.txt）；"
-                                             "也可用环境变量 BILI_COOKIE")
-    parser.add_argument("--interval", type=float, default=2.5, help="请求间隔秒数，默认 2.5")
+    common = argparse.ArgumentParser(add_help=False)
+    common.add_argument("--cookie-file", default=argparse.SUPPRESS,
+                        help="Cookie 文件（单行或 Netscape cookies.txt，"
+                             "或 - 从标准输入读取）；也可用环境变量 BILI_COOKIE")
+    common.add_argument("--interval", type=float, default=argparse.SUPPRESS,
+                        help="请求间隔秒数，默认 2.5")
+    parser.add_argument("--cookie-file", dest="cookie_file", help=argparse.SUPPRESS)
+    parser.add_argument("--interval", dest="interval", type=float, default=2.5,
+                        help=argparse.SUPPRESS)
     sub = parser.add_subparsers(dest="command", required=True)
 
-    p = sub.add_parser("check", help="检查登录态")
+    p = sub.add_parser("check", help="检查登录态", parents=[common])
     p.set_defaults(func=cmd_check)
 
-    p = sub.add_parser("subtitle", help="采集单条视频字幕")
+    p = sub.add_parser("subtitle", help="采集单条视频字幕", parents=[common])
     p.add_argument("video", help="BV 号或视频链接")
     p.add_argument("--group", default="未分组", help="分组名，用于输出文件前缀")
     p.add_argument("--out", default="corpus", help="输出目录")
     p.add_argument("--no-punctuate", action="store_true", help="不做标点还原")
     p.set_defaults(func=cmd_subtitle)
 
-    p = sub.add_parser("batch", help="批量采集字幕")
+    p = sub.add_parser("batch", help="批量采集字幕", parents=[common])
     p.add_argument("list", help="视频清单：JSON [{group,bvid}] 或每行一个 BV/链接")
     p.add_argument("--out", default="corpus", help="输出目录")
     p.set_defaults(func=cmd_batch)
 
-    p = sub.add_parser("comments", help="采集视频评论")
+    p = sub.add_parser("comments", help="采集视频评论", parents=[common])
     p.add_argument("video", help="BV 号或视频链接")
     p.add_argument("--pages", type=int, default=3, help="最多页数，每页 20 条")
     p.add_argument("--limit", type=int, default=60, help="总条数上限")
@@ -181,7 +187,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--output", help="CSV 路径")
     p.set_defaults(func=cmd_comments)
 
-    p = sub.add_parser("audio", help="下载音轨（供无字幕视频做转写）")
+    p = sub.add_parser("audio", help="下载音轨（供无字幕视频做转写）", parents=[common])
     p.add_argument("video", help="BV 号或视频链接")
     p.add_argument("--quality", type=int, default=30216, help="30216/30232/30280")
     p.add_argument("--output", help="输出文件")

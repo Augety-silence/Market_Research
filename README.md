@@ -42,6 +42,12 @@ chmod 600 ~/.bili_cookie
 
 也支持浏览器插件导出的 Netscape 格式 `cookies.txt`，或用环境变量 `BILI_COOKIE`。
 
+在其他 agent / CI 里，可以从密钥管理直接管道传入，不落盘：
+
+```bash
+get-cookie-command | python3 -m bili_research check --cookie-file -
+```
+
 > 工具不会打印、上传或写入日志 Cookie；请求只发往 `api.bilibili.com` 与字幕/音轨 CDN。
 
 ## 命令
