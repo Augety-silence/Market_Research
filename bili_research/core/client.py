@@ -142,12 +142,17 @@ class Client:
 
     def is_logged_in(self) -> bool:
         if self._logged_in is None:
+            # 未登录时 nav 返回 -101，但 data 里仍带 wbi_img，
+            # 而 WBI 签名是匿名也能算的，所以这里直接读原始响应。
+            self._ensure_buvid()
+            payload = json.loads(
+                self._open(f"{API}/x/web-interface/nav").decode("utf-8"))
+            data = payload.get("data") or {}
+            self._logged_in = bool(data.get("isLogin"))
             try:
-                data = self.get_json("/x/web-interface/nav")
-                self._logged_in = bool(data.get("isLogin"))
                 self._wbi_key = keys_from_nav(data)
-            except LoginRequired:
-                self._logged_in = False
+            except ValueError:
+                self._wbi_key = None
         return self._logged_in
 
     def wbi_key(self) -> str:

@@ -8,7 +8,7 @@ import json
 import sys
 from pathlib import Path
 
-from .collectors.comments import fetch_comments
+from .collectors.comments import collect_for_video, fetch_all_comments, fetch_comments
 from .collectors.subtitles import coverage, punctuate
 from .collectors.video import (audio_url, extract_bvid, fetch_subtitle, get_view,
                                pick_chinese, subtitle_tracks, track_url_ok, video_meta)
@@ -129,11 +129,56 @@ def cmd_comments(args) -> int:
     rows = fetch_comments(client, meta["aid"], bvid, pages=args.pages,
                           limit=args.limit, sort=args.sort,
                           keep_names=args.keep_names,
-                          include_preview=args.include_preview)
+                          include_preview=args.include_preview,
+                          group=args.group, title=meta["title"])
     out = Path(args.output or f"comments_{bvid}.csv")
     _write_comments(out, rows)
     print(f"{bvid} 采集 {len(rows)} 条评论 -> {out}")
     return 0
+
+
+def cmd_comments_batch(args) -> int:
+    """批量全量：每条视频一个 CSV，最后合并成 all_comments.csv。"""
+    from concurrent.futures import ThreadPoolExecutor
+
+    out = Path(args.out)
+    out.mkdir(parents=True, exist_ok=True)
+    items = _load_list(args.list)
+    client = _client(args)
+    client.require_login()
+
+    def run(item: dict) -> tuple[dict, list[dict], str]:
+        bvid, group = item["bvid"], item["group"]
+        target = out / f"{group}__{bvid}.csv"
+        if target.exists() and not args.force and target.stat().st_size > 40:
+            with target.open(encoding="utf-8-sig") as fh:
+                cached = list(csv.DictReader(fh))
+            if cached:
+                print(f"[跳过] {bvid} 已有 {len(cached)} 条")
+                return {"BV号": bvid}, cached, ""
+        try:
+            meta = video_meta(get_view(client, bvid))
+            rows = fetch_all_comments(client, meta["aid"], bvid, title=meta["title"],
+                                      group=group, max_sub_pages=args.max_sub_pages,
+                                      keep_names=args.keep_names)
+            _write_comments(target, rows)
+            print(f"[成功] {bvid} {len(rows)} 条 -> {target.name}")
+            return meta, rows, ""
+        except (CrawlError, LoginRequired) as exc:
+            print(f"[失败] {bvid} {exc}")
+            return {"BV号": bvid}, [], str(exc)
+
+    merged: list[dict] = []
+    failures = 0
+    with ThreadPoolExecutor(max_workers=max(1, args.workers)) as pool:
+        for meta, rows, err in pool.map(run, items):
+            merged.extend(rows)
+            if err:
+                failures += 1
+    _write_comments(out / "all_comments.csv", merged)
+    print(f"完成：{len(merged)} 条评论（{len(items) - failures}/{len(items)} 条视频成功）"
+          f"-> {out / 'all_comments.csv'}")
+    return 0 if failures == 0 else 1
 
 
 def cmd_audio(args) -> int:
@@ -151,16 +196,26 @@ def cmd_push(args) -> int:
     """把本地语料目录按约定结构推到飞书工作簿。"""
     from .exporters.feishu_sheets import export_workbook
 
-    corpus = Path(args.corpus)
+    corpus = Path(args.corpus or "corpus")
     index_file = corpus / "index.json"
-    if not index_file.exists():
-        raise CrawlError(f"{index_file} 不存在，请先跑 batch / subtitle 生成语料。")
-    rows = json.loads(index_file.read_text(encoding="utf-8"))
+    rows: list[dict] = []
+    if not args.only_comments:
+        if not index_file.exists():
+            raise CrawlError(f"{index_file} 不存在，请先跑 batch / subtitle 生成语料。")
+        rows = json.loads(index_file.read_text(encoding="utf-8"))
     comments = []
     if args.comments:
-        with Path(args.comments).open(encoding="utf-8-sig") as fh:
-            comments = list(csv.DictReader(fh))
-    stats = export_workbook(args.url, corpus, rows, comments, command=args.lark)
+        src = Path(args.comments)
+        # 目录里同时有分视频 CSV 和合并文件，只读分视频的，避免整份重复两遍
+        files = ([p for p in sorted(src.glob("*.csv")) if p.name != "all_comments.csv"]
+                 if src.is_dir() else [src])
+        for path in files:
+            with path.open(encoding="utf-8-sig") as fh:
+                comments.extend(csv.DictReader(fh))
+    if args.only_comments and not comments:
+        raise CrawlError("--only-comments 需要同时给 --comments（CSV 文件或目录）。")
+    stats = export_workbook(args.url, corpus, rows, comments, command=args.lark,
+                            only_comments=args.only_comments)
     print(f"已写入 {stats['sheets']} 张子表，覆盖 {stats['videos']} 条视频。")
     return 0
 
@@ -200,10 +255,22 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--pages", type=int, default=3, help="最多页数，每页 20 条")
     p.add_argument("--limit", type=int, default=60, help="总条数上限")
     p.add_argument("--sort", type=int, default=2, help="2=热度，0=时间")
+    p.add_argument("--group", default="未分组", help="分组名（写入飞书时决定落哪张子表）")
     p.add_argument("--keep-names", action="store_true", help="保留原始昵称（默认脱敏）")
     p.add_argument("--include-preview", action="store_true", help="附带楼中楼预览")
     p.add_argument("--output", help="CSV 路径")
     p.set_defaults(func=cmd_comments)
+
+    p = sub.add_parser("comments-batch", help="批量全量采集评论（游标翻到底 + 楼中楼）",
+                       parents=[common])
+    p.add_argument("list", help="视频清单：JSON [{group,bvid}] 或每行一个 BV/链接")
+    p.add_argument("--out", default="comments", help="输出目录")
+    p.add_argument("--workers", type=int, default=2, help="并发视频数，默认 2")
+    p.add_argument("--max-sub-pages", type=int, default=8,
+                   help="每个根评论最多取几页楼中楼（每页 20 条）")
+    p.add_argument("--keep-names", action="store_true", help="保留原始昵称")
+    p.add_argument("--force", action="store_true", help="忽略已有结果重新采集")
+    p.set_defaults(func=cmd_comments_batch)
 
     p = sub.add_parser("audio", help="下载音轨（供无字幕视频做转写）", parents=[common])
     p.add_argument("video", help="BV 号或视频链接")
@@ -216,6 +283,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--url", required=True, help="飞书电子表格链接")
     p.add_argument("--corpus", default="corpus", help="本地语料目录")
     p.add_argument("--comments", help="评论 CSV（可选）")
+    p.add_argument("--only-comments", action="store_true",
+                   help="只写评论子表，不动视频与字幕子表")
     p.add_argument("--lark", default="lark-cli", help="lark-cli 可执行文件路径")
     p.set_defaults(func=cmd_push)
     return parser

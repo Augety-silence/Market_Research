@@ -20,14 +20,14 @@ from ..collectors.subtitles import char_count
 
 SECTION_PREFIX = ">>>"
 SUMMARY_SHEET = "汇总-视频清单"
-COMMENT_SHEETS = {"商家推广": "评论-供给侧", "供给侧推广": "评论-供给侧",
-                  "需求侧科普": "评论-需求侧"}
+COMMENT_SHEETS = {"商家推广": "评论-供给侧", "需求侧科普": "评论-需求侧"}
+COMMENT_ORDER = ("评论-供给侧", "评论-需求侧")
 
 VIDEO_COLUMNS = ["序号", "分组", "BV号", "标题", "UP主", "时长(秒)", "播放",
                  "评论数", "字幕段数", "字数", "覆盖率", "来源"]
 SUBTITLE_COLUMNS = ["序号", "开始(秒)", "结束(秒)", "正文"]
-COMMENT_COLUMNS = ["BV号", "标题", "评论ID", "用户", "时间", "点赞", "回复数",
-                   "是否楼中楼", "正文"]
+COMMENT_COLUMNS = ["BV号", "标题", "分组", "评论ID", "根评论ID", "用户", "时间",
+                   "点赞", "回复数", "是否楼中楼", "正文"]
 
 _ILLEGAL = re.compile(r'[\\/?*\[\]:]')
 
@@ -87,23 +87,32 @@ class FeishuSheets:
         sheet = self.info().get(name, {})
         need = start_row + len(rows) + 5
         if sheet.get("row_count", 0) < need:
-            self._run("+dim-insert", "--url", self.url, "--sheet-id", sheet["sheet_id"],
-                      "--position", str(max(1, sheet["row_count"])),
-                      "--count", str(need - sheet["row_count"]))
+            # 单次插入太多行会被拒，按 5000 行一批追加
+            missing = need - sheet["row_count"]
+            while missing > 0:
+                step = min(5000, missing)
+                self._run("+dim-insert", "--url", self.url, "--sheet-id", sheet["sheet_id"],
+                          "--position", str(max(1, sheet["row_count"])),
+                          "--count", str(step))
+                sheet = self.info(refresh=True).get(name, {})
+                missing -= step
             self.info(refresh=True)
         last_col = chr(ord("A") + cols - 1)
-        cells = [[{"value": h} for h in header]]
-        for row in rows:
-            cells.append([{"value": v} for v in row])
-        cell_range = f"A{start_row}:{last_col}{len(cells) + start_row - 1}"
-        # lark-cli 只接受当前目录下的相对路径，所以落在 cwd 的临时文件里
-        path = Path.cwd() / f".bili_payload_{uuid.uuid4().hex}.json"
-        path.write_text(json.dumps(cells, ensure_ascii=False), encoding="utf-8")
-        try:
-            self._run("+cells-set", "--url", self.url, "--sheet-name", name,
-                      "--range", cell_range, "--cells", f"@./{path.name}")
-        finally:
-            path.unlink(missing_ok=True)
+        payload = [[{"value": h} for h in header]]
+        payload += [[{"value": v} for v in row] for row in rows]
+        # 一次写太多会被网关截断，按 800 行切片写
+        for offset in range(0, len(payload), 800):
+            chunk = payload[offset:offset + 800]
+            first = start_row + offset
+            cell_range = f"A{first}:{last_col}{first + len(chunk) - 1}"
+            # lark-cli 只接受当前目录下的相对路径，所以落在 cwd 的临时文件里
+            path = Path.cwd() / f".bili_payload_{uuid.uuid4().hex}.json"
+            path.write_text(json.dumps(chunk, ensure_ascii=False), encoding="utf-8")
+            try:
+                self._run("+cells-set", "--url", self.url, "--sheet-name", name,
+                          "--range", cell_range, "--cells", f"@./{path.name}")
+            finally:
+                path.unlink(missing_ok=True)
         self.info(refresh=True)
 
     def write_info(self, name: str, pairs: list[tuple[str, object]]) -> None:
@@ -180,26 +189,33 @@ def video_info(data: dict, row: dict, collected_on: str = "") -> list[tuple[str,
 
 
 def comment_rows(rows: list[dict]) -> list[list]:
-    return [[r.get("BV号", ""), r.get("标题", ""), r.get("评论ID", ""), r.get("用户", ""),
-             r.get("时间", ""), r.get("点赞", 0), r.get("回复数", 0),
-             "是" if r.get("是否楼中楼") else "否", r.get("正文", "")] for r in rows]
+    def flag(value) -> str:
+        return "是" if str(value).lower() in ("1", "true", "是") else "否"
+
+    return [[r.get("BV号", ""), r.get("标题", ""), r.get("分组", ""), r.get("评论ID", ""),
+             r.get("根评论ID", ""), r.get("用户", ""),
+             r.get("时间文本") or r.get("时间", ""), r.get("点赞", 0),
+             r.get("回复数", 0), flag(r.get("是否楼中楼")), r.get("正文", "")]
+            for r in rows]
 
 
 def export_workbook(url: str, corpus: Path, index_rows: list[dict],
                     comments: list[dict] | None = None, collected_on: str = "",
-                    command: str = "lark-cli") -> dict:
+                    command: str = "lark-cli", only_comments: bool = False) -> dict:
     """按约定把一份语料目录推到飞书工作簿。
 
     返回统计：创建/更新的子表数量，便于调用方校验。
     """
     collected_on = collected_on or date.today().isoformat()
     book = FeishuSheets(url, command=command)
-    book.ensure_sheet(SUMMARY_SHEET, index=0)
-    book.write_table(SUMMARY_SHEET, video_rows(index_rows), VIDEO_COLUMNS, index=0)
-
-    created = 1
-    order = [SUMMARY_SHEET]
-    for group in ("商家推广", "需求侧科普"):
+    created = 0
+    order: list[str] = []
+    if not only_comments:
+        book.ensure_sheet(SUMMARY_SHEET, index=0)
+        book.write_table(SUMMARY_SHEET, video_rows(index_rows), VIDEO_COLUMNS, index=0)
+        created = 1
+        order = [SUMMARY_SHEET]
+    for group in (() if only_comments else ("商家推广", "需求侧科普")):
         section = f"{SECTION_PREFIX}{'供给侧' if group == '商家推广' else '需求侧'}"
         book.ensure_sheet(section)
         order.append(section)
@@ -219,11 +235,23 @@ def export_workbook(url: str, corpus: Path, index_rows: list[dict],
             created += 1
 
     if comments:
-        for group, name in COMMENT_SHEETS.items():
-            subset = [c for c in comments if _group_key(c.get("分组", group)) == _group_key(group)]
+        buckets: dict[str, list[dict]] = {}
+        seen: set[tuple[str, str]] = set()
+        for row in comments:
+            key = (str(row.get("BV号", "")), str(row.get("评论ID", "")))
+            if key in seen:  # 多次采集/分片合并且目录里同时有合并文件时兜底去重
+                continue
+            seen.add(key)
+            sheet = COMMENT_SHEETS[_group_key(row.get("分组", ""))]
+            buckets.setdefault(sheet, []).append(row)
+        for name in COMMENT_ORDER:
+            subset = buckets.get(name)
             if subset:
+                book.ensure_sheet(name)
+                book.clear(name)
                 book.write_table(name, comment_rows(subset), COMMENT_COLUMNS)
                 created += 1
                 order.append(name)
-    book.reorder(order)
+    if not only_comments:
+        book.reorder(order)
     return {"sheets": created, "videos": len(index_rows)}

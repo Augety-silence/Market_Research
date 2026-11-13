@@ -7,7 +7,7 @@
 | 模块 | 状态 | 采集内容 | 文档 |
 | --- | --- | --- | --- |
 | 字幕 | 可用 | 视频元信息 + AI 字幕逐段文本 | [docs/features/subtitles.md](docs/features/subtitles.md) |
-| 评论 | 可用 | 主评论分页、昵称脱敏、楼中楼预览 | [docs/features/comments.md](docs/features/comments.md) |
+| 评论 | 可用 | 全量主评论（游标翻到底）+ 楼中楼，昵称脱敏 | [docs/features/comments.md](docs/features/comments.md) |
 | 音轨 | 可用 | DASH 音轨下载，供无字幕视频做转写 | [docs/features/subtitles.md](docs/features/subtitles.md) |
 | 飞书表格 | 可用 | 按约定把语料写入电子表格，每类内容一张子表 | [docs/features/feishu-sheets.md](docs/features/feishu-sheets.md) |
 
@@ -31,6 +31,7 @@ python3 -m bili_research batch examples/video_list.example.json --out corpus
 
 # 评论
 python3 -m bili_research comments BV1xxxxxxxxx --pages 3 --limit 60
+python3 -m bili_research comments-batch examples/video_list.example.json --out comments
 
 # 写入飞书工作簿（需本机有 lark-cli）
 python3 -m bili_research push-feishu --url "<表格链接>" --corpus corpus
