@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import hashlib
 
-from .client import Client
-from .errors import CrawlError
+from ..core.client import Client
+from ..core.errors import CrawlError
 
 
 def mask_user(name: str) -> str:

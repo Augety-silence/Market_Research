@@ -1,6 +1,6 @@
 import unittest
 
-from bili_research.wbi import mixin_key, sign
+from bili_research.core.wbi import mixin_key, sign
 
 
 class WbiTest(unittest.TestCase):

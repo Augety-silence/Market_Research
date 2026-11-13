@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from bili_research.client import read_cookie
+from bili_research.core.client import read_cookie
 
 
 class CookieTest(unittest.TestCase):

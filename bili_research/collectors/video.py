@@ -6,8 +6,8 @@ import json
 import re
 from urllib.parse import urlparse
 
-from .client import Client
-from .errors import CrawlError
+from ..core.client import Client
+from ..core.errors import CrawlError
 from .subtitles import coverage  # noqa: F401  (对外保持 video.coverage 可用)
 
 BVID_RE = re.compile(r"(BV[0-9A-Za-z]{10})")

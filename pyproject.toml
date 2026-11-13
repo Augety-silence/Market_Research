@@ -12,5 +12,5 @@ dependencies = []
 [project.scripts]
 bili-research = "bili_research.cli:main"
 
-[tool.setuptools]
-packages = ["bili_research"]
+[tool.setuptools.packages.find]
+include = ["bili_research*"]

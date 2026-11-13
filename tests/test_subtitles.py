@@ -1,6 +1,6 @@
 import unittest
 
-from bili_research.subtitles import char_count, coverage, punctuate, to_srt
+from bili_research.collectors.subtitles import char_count, coverage, punctuate, to_srt
 
 SEGMENTS = [
     {"from": 0.0, "to": 2.0, "content": "大家好"},

@@ -1,6 +1,6 @@
 import unittest
 
-from bili_research.comments import mask_user, user_id
+from bili_research.collectors.comments import mask_user, user_id
 
 
 class CommentTest(unittest.TestCase):

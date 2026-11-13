@@ -8,13 +8,13 @@ import json
 import sys
 from pathlib import Path
 
-from .client import Client, read_cookie
-from .comments import fetch_comments
-from .errors import CrawlError, LoginRequired
-from .store import save_unit, write_index
-from .subtitles import coverage, punctuate
-from .video import (audio_url, extract_bvid, fetch_subtitle, get_view,
-                    pick_chinese, subtitle_tracks, track_url_ok, video_meta)
+from .collectors.comments import fetch_comments
+from .collectors.subtitles import coverage, punctuate
+from .collectors.video import (audio_url, extract_bvid, fetch_subtitle, get_view,
+                               pick_chinese, subtitle_tracks, track_url_ok, video_meta)
+from .core.client import Client, read_cookie
+from .core.errors import CrawlError, LoginRequired
+from .exporters.local_csv import save_unit, write_index
 
 
 def _client(args) -> Client:
@@ -147,6 +147,24 @@ def cmd_audio(args) -> int:
     return 0
 
 
+def cmd_push(args) -> int:
+    """把本地语料目录按约定结构推到飞书工作簿。"""
+    from .exporters.feishu_sheets import export_workbook
+
+    corpus = Path(args.corpus)
+    index_file = corpus / "index.json"
+    if not index_file.exists():
+        raise CrawlError(f"{index_file} 不存在，请先跑 batch / subtitle 生成语料。")
+    rows = json.loads(index_file.read_text(encoding="utf-8"))
+    comments = []
+    if args.comments:
+        with Path(args.comments).open(encoding="utf-8-sig") as fh:
+            comments = list(csv.DictReader(fh))
+    stats = export_workbook(args.url, corpus, rows, comments, command=args.lark)
+    print(f"已写入 {stats['sheets']} 张子表，覆盖 {stats['videos']} 条视频。")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="bili_research",
@@ -192,6 +210,14 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--quality", type=int, default=30216, help="30216/30232/30280")
     p.add_argument("--output", help="输出文件")
     p.set_defaults(func=cmd_audio)
+
+    p = sub.add_parser("push-feishu", help="把语料目录写入飞书工作簿（需 lark-cli）",
+                       parents=[common])
+    p.add_argument("--url", required=True, help="飞书电子表格链接")
+    p.add_argument("--corpus", default="corpus", help="本地语料目录")
+    p.add_argument("--comments", help="评论 CSV（可选）")
+    p.add_argument("--lark", default="lark-cli", help="lark-cli 可执行文件路径")
+    p.set_defaults(func=cmd_push)
     return parser
 
 

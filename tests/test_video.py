@@ -1,6 +1,6 @@
 import unittest
 
-from bili_research.video import extract_bvid, pick_chinese, track_url_ok
+from bili_research.collectors.video import extract_bvid, pick_chinese, track_url_ok
 
 
 class VideoTest(unittest.TestCase):

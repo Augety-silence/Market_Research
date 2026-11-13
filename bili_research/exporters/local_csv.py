@@ -6,7 +6,7 @@ import csv
 import json
 from pathlib import Path
 
-from .subtitles import char_count
+from ..collectors.subtitles import char_count
 
 INDEX_FIELDS = [
     "序号", "分组", "BV号", "标题", "UP主", "播放", "评论", "时长秒",
@@ -40,7 +40,7 @@ def save_unit(outdir: Path, meta: dict, segments: list[dict], paras: list[str],
     (outdir / f"{stem}.json").write_text(
         json.dumps(raw, ensure_ascii=False, indent=1), encoding="utf-8")
     if segments:
-        from .subtitles import to_srt
+        from ..collectors.subtitles import to_srt
         (outdir / f"{stem}.srt").write_text(to_srt(segments), encoding="utf-8")
         text = "\n\n".join(paras)
         (outdir / f"{stem}.txt").write_text(text, encoding="utf-8")
