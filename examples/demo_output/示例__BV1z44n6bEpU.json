@@ -1,0 +1,45 @@
+{
+ "bvid": "BV1z44n6bEpU",
+ "aid": 0,
+ "cid": 0,
+ "title": "示例视频（演示数据）",
+ "owner": "示例UP主",
+ "duration": 18,
+ "view": 0,
+ "reply": 0,
+ "status": "ok",
+ "source": "AI字幕",
+ "coverage": 1.0,
+ "segments": [
+  {
+   "from": 0.0,
+   "to": 3.2,
+   "content": "大家好，这期用一个示例视频演示采集流程"
+  },
+  {
+   "from": 3.3,
+   "to": 6.0,
+   "content": "先看视频的基本信息"
+  },
+  {
+   "from": 6.4,
+   "to": 9.1,
+   "content": "再看字幕是怎么落盘的"
+  },
+  {
+   "from": 9.2,
+   "to": 12.5,
+   "content": "最后是评论区的结构化结果"
+  },
+  {
+   "from": 13.0,
+   "to": 16.2,
+   "content": "所有内容都只用于演示"
+  },
+  {
+   "from": 16.3,
+   "to": 18.0,
+   "content": "不代表任何真实视频的观点"
+  }
+ ]
+}

@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+.venv/
+corpus/
+audio/
+*.m4s
+*.mp3
+cookies.txt
+.env

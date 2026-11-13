@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bili-research"
+version = "1.0.0"
+description = "B站视频字幕与评论采集（纯 HTTP，无需浏览器接管）"
+requires-python = ">=3.10"
+dependencies = []
+
+[project.scripts]
+bili-research = "bili_research.cli:main"
+
+[tool.setuptools]
+packages = ["bili_research"]
