@@ -26,7 +26,7 @@ COMMENT_ORDER = ("评论-供给侧", "评论-需求侧")
 VIDEO_COLUMNS = ["序号", "分组", "BV号", "标题", "UP主", "时长(秒)", "播放",
                  "评论数", "字幕段数", "字数", "覆盖率", "来源"]
 SUBTITLE_COLUMNS = ["序号", "开始(秒)", "结束(秒)", "正文"]
-COMMENT_COLUMNS = ["BV号", "标题", "分组", "评论ID", "根评论ID", "用户", "时间",
+COMMENT_COLUMNS = ["BV号", "标题", "药物", "分组", "评论ID", "根评论ID", "用户", "时间",
                    "点赞", "回复数", "是否楼中楼", "正文"]
 
 _ILLEGAL = re.compile(r'[\\/?*\[\]:]')
@@ -192,8 +192,8 @@ def comment_rows(rows: list[dict]) -> list[list]:
     def flag(value) -> str:
         return "是" if str(value).lower() in ("1", "true", "是") else "否"
 
-    return [[r.get("BV号", ""), r.get("标题", ""), r.get("分组", ""), r.get("评论ID", ""),
-             r.get("根评论ID", ""), r.get("用户", ""),
+    return [[r.get("BV号", ""), r.get("标题", ""), r.get("药物", ""), r.get("分组", ""),
+             r.get("评论ID", ""), r.get("根评论ID", ""), r.get("用户", ""),
              r.get("时间文本") or r.get("时间", ""), r.get("点赞", 0),
              r.get("回复数", 0), flag(r.get("是否楼中楼")), r.get("正文", "")]
             for r in rows]
