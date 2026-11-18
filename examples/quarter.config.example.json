@@ -1,0 +1,25 @@
+{
+  "keywords": [
+    "奥利司他",
+    "司美格鲁肽",
+    "左旋肉碱"
+  ],
+  "start_date": "2024-01-01",
+  "end_date": "2026-11-16",
+  "output_dir": "output",
+  "snapshot_file": "examples/quarter_snapshot/collected.json",
+  "browser": {
+    "profile_dir": ".browser-profile",
+    "channel": "",
+    "page_delay_seconds": 2,
+    "timeout_seconds": 40
+  },
+  "feishu": {
+    "api_base": "https://open.feishu.cn/open-apis",
+    "spreadsheet_token": "",
+    "detail_sheet_id": "",
+    "detail_sheet_name": "视频明细",
+    "progress_sheet_id": "",
+    "summary_sheet_id": ""
+  }
+}

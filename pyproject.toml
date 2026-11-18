@@ -4,10 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "bili-research"
-version = "1.0.0"
-description = "B站视频字幕与评论采集（纯 HTTP，无需浏览器接管）"
+version = "1.1.0"
+description = "B站市场调研：字幕、评论与可选季度关键词采集"
 requires-python = ">=3.10"
 dependencies = []
+
+[project.optional-dependencies]
+quarter = ["playwright>=1.48,<2", "requests>=2.32,<3", "openpyxl>=3.1,<4"]
 
 [project.scripts]
 bili-research = "bili_research.cli:main"
