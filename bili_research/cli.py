@@ -223,7 +223,7 @@ def cmd_push(args) -> int:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="bili_research",
-        description="B 站视频字幕 / 评论采集（纯 HTTP，无需浏览器接管）")
+        description="B站字幕 / 评论 / 季度关键词调研采集")
     common = argparse.ArgumentParser(add_help=False)
     common.add_argument("--cookie-file", default=argparse.SUPPRESS,
                         help="Cookie 文件（单行或 Netscape cookies.txt，"
@@ -287,6 +287,8 @@ def build_parser() -> argparse.ArgumentParser:
                    help="只写评论子表，不动视频与字幕子表")
     p.add_argument("--lark", default="lark-cli", help="lark-cli 可执行文件路径")
     p.set_defaults(func=cmd_push)
+    from .quarter_runner import configure_parser
+    configure_parser(sub.add_parser("quarter", help="季度关键词采集、断点、公式与趋势图（可选依赖）"))
     return parser
 
 

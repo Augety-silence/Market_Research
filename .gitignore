@@ -7,3 +7,14 @@ audio/
 *.mp3
 cookies.txt
 .env
+
+# 季度采集运行数据与专用登录状态
+quarter.config.json
+.browser-profile*/
+output*/
+*.sqlite3
+*.sqlite3-*
+*.lock
+build/
+dist/
+*.egg-info/
