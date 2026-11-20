@@ -4,16 +4,21 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "bili-research"
-version = "1.1.0"
-description = "B站市场调研：字幕、评论与可选季度关键词采集"
+version = "2.0.0"
+description = "减重产品研究：B站、Sensor Tower、百度导入、五维词次与季度分析"
 requires-python = ">=3.10"
 dependencies = []
 
 [project.optional-dependencies]
+research = ["requests>=2.32,<3", "jieba==0.42.1", "numpy>=1.24,<3", "scipy>=1.10,<2", "matplotlib>=3.7,<4", "wordcloud>=1.9,<2", "python-pptx>=1.0,<2", "PyMuPDF>=1.24,<2"]
 quarter = ["playwright>=1.48,<2", "requests>=2.32,<3", "openpyxl>=3.1,<4"]
 
 [project.scripts]
 bili-research = "bili_research.cli:main"
+market-research = "market_research.cli:main"
 
 [tool.setuptools.packages.find]
-include = ["bili_research*"]
+include = ["bili_research*", "market_research*"]
+
+[tool.setuptools.package-data]
+market_research = ["annotation_prompt.txt", "candidate_dictionary.json"]

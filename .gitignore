@@ -18,3 +18,19 @@ output*/
 build/
 dist/
 *.egg-info/
+
+# 独立研究流水线：源码之外的全部运行内容留在本机
+data/
+results/
+*.sqlite
+*.sqlite-*
+*.env
+.env.*
+!.env.example
+*.config.json
+config.json
+feishu.json
+credentials*
+*_cookie*
+*.part
+*.zip

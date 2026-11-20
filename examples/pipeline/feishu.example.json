@@ -1,0 +1,15 @@
+{
+  "spreadsheet_token": "",
+  "summary_sheet_id": "",
+  "api_base": "https://open.feishu.cn/open-apis",
+  "raw_sheet_names": {
+    "videos": "视频Raw",
+    "occurrences": "词次Raw",
+    "baidu": "百度Raw",
+    "sales": "App销售Raw",
+    "app_group_daily": "App组日活Raw"
+  },
+  "model_start_row": 200,
+  "baidu_start_row": 400,
+  "app_start_row": 600
+}

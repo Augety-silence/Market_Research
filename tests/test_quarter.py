@@ -81,16 +81,22 @@ class CollectorTests(unittest.TestCase):
         self.assertEqual(self.job['status'],'数量待核验')
 
     def test_snapshot_and_six_charts(self):
-        seed=json.loads((ROOT/'examples/quarter_snapshot/collected.json').read_text());self.assertEqual(self.store.seed(seed),5496)
+        from bili_research.collectors.quarter_search import fingerprint,video_rows
+        seed={'fingerprint':fingerprint(CONFIG),'videos':[],'jobs':[]}
+        for j in self.store.jobs():
+            result=sample(j,bvs=('BV0000000001','BV0000000002'),total=2)
+            seed['videos'].extend(video_rows(j,result))
+            seed['jobs'].append(dict(j,last_page=1,next_page=0,total=2,status='已完成',updated='2024-01-01'))
+        self.assertEqual(self.store.seed(seed),72)
         self.assertTrue(all(j['status']=='已完成' for j in self.store.jobs()))
-        self.assertEqual(len({r[2] for r in self.store.rows()}),5476)
-        self.assertEqual(sum(r[5] for r in self.store.rows()),278198478)
+        self.assertEqual(len({r[2] for r in self.store.rows()}),2)
+        self.assertEqual(sum(r[5] for r in self.store.rows()),7164)
         path=Path(self.temp.name)/'result.xlsx';export_xlsx(self.store,CONFIG,path)
         wb=load_workbook(path)
         self.assertEqual(len(wb['独立趋势图']._charts),6)
         self.assertTrue(all(len(c.series)==1 for c in wb['独立趋势图']._charts))
         self.assertEqual(sum(c.data_type=='f' for row in wb['季度汇总'] for c in row),72)
-        self.assertEqual(wb['视频明细'].max_row,5497)
+        self.assertEqual(wb['视频明细'].max_row,73)
 
     def test_config_change_rejected(self):
         cfg=dict(CONFIG,end_date='2026-11-18')

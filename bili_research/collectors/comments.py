@@ -127,6 +127,7 @@ def fetch_all_comments(client: Client, aid: int, bvid: str, title: str = "",
     rows: list[dict] = []
     seen: set[str] = set()
     offset = ""
+    seen_offsets = set()
     page = 0
 
     def add(reply: dict, root: str, is_sub: bool) -> None:
@@ -172,6 +173,9 @@ def fetch_all_comments(client: Client, aid: int, bvid: str, title: str = "",
         nxt = (cursor.get("pagination_reply") or {}).get("next_offset")
         if not replies or cursor.get("is_end") or not nxt:
             break
+        if nxt in seen_offsets:
+            raise CrawlError("评论游标重复，已停止，防止无限翻页。")
+        seen_offsets.add(nxt)
         offset = nxt
 
     for index, (root, rcount) in enumerate(roots, 1):

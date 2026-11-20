@@ -1,0 +1,10 @@
+{
+  "id": "评论ID",
+  "side": "需求或供给",
+  "date": "时间",
+  "products": "涉及产品",
+  "bvid": "BV号",
+  "text": "正文",
+  "purpose": "内容用途",
+  "source": "来源类型"
+}
